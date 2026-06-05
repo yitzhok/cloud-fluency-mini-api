@@ -4,9 +4,13 @@ import logging
 import os
 import time
 import uuid
+import boto3
+import json
 
 APP_VERSION = os.getenv("APP_VERSION", "1.0.0")
 APP_ENV = os.getenv("APP_ENV", "local")
+S3_BUCKET = os.getenv("S3_BUCKET")
+S3_KEY = os.getenv("S3_KEY", "config.json")
 
 logging.basicConfig(
     level=logging.INFO,
@@ -83,3 +87,28 @@ def echo(msg: str):
 @app.get("/fail")
 def fail():
     raise RuntimeError("simulated failure")
+
+@app.get("/s3-config")
+def s3_config():
+
+    s3 = boto3.client("s3")
+
+    response = s3.get_object(
+        Bucket=S3_BUCKET,
+        Key=S3_KEY
+    )
+
+    content = response["Body"].read().decode("utf-8")
+
+    return json.loads(content)
+
+@app.get("/work")
+def work(delay: int = 0):
+
+    if delay > 0:
+        time.sleep(delay)
+
+    return {
+        "status": "done",
+        "delay": delay
+    }
