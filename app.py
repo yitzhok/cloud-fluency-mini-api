@@ -112,3 +112,7 @@ def work(delay: int = 0):
         "status": "done",
         "delay": delay
     }
+
+@app.get("/fail")
+def fail():
+    raise Exception("simulated failure")
