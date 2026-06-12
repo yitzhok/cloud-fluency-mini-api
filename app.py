@@ -11,6 +11,7 @@ APP_VERSION = os.getenv("APP_VERSION", "1.0.0")
 APP_ENV = os.getenv("APP_ENV", "local")
 S3_BUCKET = os.getenv("S3_BUCKET")
 S3_KEY = os.getenv("S3_KEY", "config.json")
+SQS_QUEUE_URL = os.getenv("SQS_QUEUE_URL")
 
 logging.basicConfig(
     level=logging.INFO,
@@ -116,3 +117,18 @@ def work(delay: int = 0):
 @app.get("/fail")
 def fail():
     raise Exception("simulated failure")
+
+
+@app.post("/jobs")
+def create_job(payload: dict):
+    sqs = boto3.client("sqs")
+
+    response = sqs.send_message(
+        QueueUrl=SQS_QUEUE_URL,
+        MessageBody=json.dumps(payload),
+    )
+
+    return {
+        "status": "queued",
+        "message_id": response["MessageId"]
+    }
