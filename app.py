@@ -118,6 +118,17 @@ def work(delay: int = 0):
 def fail():
     raise Exception("simulated failure")
 
+@app.get("/debug/try-receive")
+def debug_try_receive():
+    sqs = boto3.client("sqs")
+
+    response = sqs.receive_message(
+        QueueUrl=SQS_QUEUE_URL,
+        MaxNumberOfMessages=1,
+        WaitTimeSeconds=1,
+    )
+
+    return response
 
 @app.post("/jobs")
 def create_job(payload: dict):
