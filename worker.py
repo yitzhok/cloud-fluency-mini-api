@@ -39,6 +39,9 @@ def main():
             body = json.loads(msg["Body"])
 
             logger.info("job_received body=%s", body)
+            if body.get("should_fail"):
+                logger.error("job_failed_intentionally body=%s", body)
+                raise RuntimeError("intentional worker failure")
 
             delay = int(body.get("delay", 1))
             time.sleep(delay)
