@@ -7,6 +7,9 @@ import uuid
 import boto3
 import json
 
+# a test for push purpose only
+
+
 APP_VERSION = os.getenv("APP_VERSION", "1.0.0")
 APP_ENV = os.getenv("APP_ENV", "local")
 S3_BUCKET = os.getenv("S3_BUCKET")
