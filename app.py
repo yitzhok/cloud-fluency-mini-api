@@ -21,7 +21,8 @@ logging.basicConfig(
 logger = logging.getLogger("mini-api")
 
 app = FastAPI(title="Cloud Fluency Mini API")
-
+secret = os.getenv("WORKER_SHARED_SECRET")
+logger.info("worker_secret_loaded=%s", bool(secret))
 
 @app.middleware("http")
 async def add_request_logging(request: Request, call_next):
@@ -129,6 +130,8 @@ def debug_try_receive():
     )
 
     return response
+
+
 
 @app.post("/jobs")
 def create_job(payload: dict):
