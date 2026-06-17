@@ -6,6 +6,8 @@ import time
 import uuid
 import boto3
 import json
+import uuid
+from datetime import datetime, timezone
 
 # a test for push purpose only
 
@@ -15,6 +17,7 @@ APP_ENV = os.getenv("APP_ENV", "local")
 S3_BUCKET = os.getenv("S3_BUCKET")
 S3_KEY = os.getenv("S3_KEY", "config.json")
 SQS_QUEUE_URL = os.getenv("SQS_QUEUE_URL")
+DDB_TABLE_NAME = os.getenv("DDB_TABLE_NAME", "cloud-fluent-jobs-status")
 
 logging.basicConfig(
     level=logging.INFO,
@@ -135,17 +138,54 @@ def debug_try_receive():
     return response
 
 
-
 @app.post("/jobs")
 def create_job(payload: dict):
-    sqs = boto3.client("sqs")
+    job_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
 
+    dynamodb = boto3.resource("dynamodb")
+    table = dynamodb.Table(DDB_TABLE_NAME)
+
+    item = {
+        "job_id": job_id,
+        "status": "PENDING",
+        "created_at": now,
+        "updated_at": now,
+        "payload": json.dumps(payload),
+    }
+
+    table.put_item(Item=item)
+
+    sqs = boto3.client("sqs")
     response = sqs.send_message(
         QueueUrl=SQS_QUEUE_URL,
-        MessageBody=json.dumps(payload),
+        MessageBody=json.dumps({
+            "job_id": job_id,
+            "payload": payload
+        }),
     )
 
     return {
         "status": "queued",
+        "job_id": job_id,
         "message_id": response["MessageId"]
     }
+
+@app.get("/jobs/{job_id}")
+def get_job(job_id: str):
+    dynamodb = boto3.resource("dynamodb")
+    table = dynamodb.Table(DDB_TABLE_NAME)
+
+    response = table.get_item(
+        Key={"job_id": job_id}
+    )
+
+    item = response.get("Item")
+
+    if not item:
+        return JSONResponse(
+            status_code=404,
+            content={"error": "job_not_found", "job_id": job_id}
+        )
+
+    return item
