@@ -153,10 +153,13 @@ def create_job(payload: dict):
         "updated_at": now,
         "payload": json.dumps(payload),
     }
-
+    logger.info("jobs_put_ddb_start job_id=%s", job_id)
     table.put_item(Item=item)
+    logger.info("jobs_put_ddb_done job_id=%s", job_id)
 
     sqs = boto3.client("sqs")
+
+    logger.info("jobs_send_sqs_start job_id=%s", job_id)
     response = sqs.send_message(
         QueueUrl=SQS_QUEUE_URL,
         MessageBody=json.dumps({
@@ -164,12 +167,15 @@ def create_job(payload: dict):
             "payload": payload
         }),
     )
-
+    
+    logger.info("jobs_send_sqs_done job_id=%s", job_id)
+    
     return {
         "status": "queued",
         "job_id": job_id,
         "message_id": response["MessageId"]
     }
+    
 
 @app.get("/jobs/{job_id}")
 def get_job(job_id: str):
